@@ -1,3 +1,20 @@
+This package a is forked from [react-native-deck-swiper](https://github.com/alexbrillant/react-native-deck-swiper), the 'infinite' effect was enhanced.
+
+The cards swiped will emerge behind, which look like below:
+
+![preview](./animation-infinite.gif)
+
+A 'stackOpacity' prop is added to make the effect better:
+
+| Props           | type           | description                                                          | required | default |
+| :-------------- | :------------- | :------------------------------------------------------------------- | :------- | :------ |
+| stackOpacity       | number         | opacity base of each underlaying card |          | 0.8       |
+
+--------------
+
+
+
+
 ## react-native-deck-swiper
 
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dwyl/esta/issues)

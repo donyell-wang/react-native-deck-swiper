@@ -28,7 +28,7 @@ class Swiper extends Component {
       panResponderLocked: false,
       labelType: LABEL_TYPES.NONE,
       slideGesture: false,
-      ...this.rebuildStackAnimatedValues(props.cards, props.cardIndex)
+      ...this.rebuildStackAnimatedValues(props.cards)
     }
   }
 
@@ -47,17 +47,17 @@ class Swiper extends Component {
     return propsChanged || stateChanged
   }
 
-  rebuildStackAnimatedValues = (cards, cardIndex) => {
-    const stackPositionsAndScales = {}
+  rebuildStackAnimatedValues = (cards) => {
+    const stackStyles = {}
 
-    cards.slice(cardIndex).forEach((card, index) => {
-      const dIndex = cardIndex + index
+    cards.forEach((card, index) => {
       const factor = index < this.props.stackSize ? index : this.props.stackSize
-      stackPositionsAndScales[`stackPosition${dIndex}`] = new Animated.Value(this.props.stackSeparation * factor)
-      stackPositionsAndScales[`stackScale${dIndex}`] = new Animated.Value((100 - this.props.stackScale * factor) * 0.01)
+      stackStyles[`stackPosition${index}`] = new Animated.Value(this.props.stackSeparation * factor)
+      stackStyles[`stackScale${index}`] = new Animated.Value((100 - this.props.stackScale * factor) * 0.01)
+      stackStyles[`stackOpacity${index}`] = new Animated.Value(Math.pow(this.props.stackOpacity, factor))
     })
 
-    return stackPositionsAndScales
+    return stackStyles
   }
 
   componentWillReceiveProps = (newProps) => {
@@ -69,7 +69,7 @@ class Swiper extends Component {
       swipedAllCards: false,
       panResponderLocked: newProps.cards && newProps.cards.length === 0,
       slideGesture: false,
-      ...this.rebuildStackAnimatedValues(newProps.cards, newProps.cardIndex)
+      ...this.rebuildStackAnimatedValues(newProps.cards)
     })
   }
 
@@ -429,15 +429,11 @@ class Swiper extends Component {
 
   animateStack = () => {
     const { cards, secondCardIndex } = this.state
-    let lastCardIndex = secondCardIndex + this.props.stackSize - 1
-    if (lastCardIndex >= cards.length) {
-      lastCardIndex = cards.length - 1
-    }
     let cardPosition = 0
 
-    for (var index = secondCardIndex; index <= lastCardIndex; index++) {
+    for (let i = 1; i < this.props.stackSize; i++) {
       const newSeparation = this.props.stackSeparation * cardPosition
-      Animated.spring(this.state[`stackPosition${index}`], {
+      Animated.spring(this.state[`stackPosition${i}`], {
         toValue: newSeparation,
         friction: this.props.stackAnimationFriction,
         tension: this.props.stackAnimationTension,
@@ -445,8 +441,16 @@ class Swiper extends Component {
       }).start()
 
       const newScale = (100 - this.props.stackScale * cardPosition) * 0.01
-      Animated.spring(this.state[`stackScale${index}`], {
+      Animated.spring(this.state[`stackScale${i}`], {
         toValue: newScale,
+        friction: this.props.stackAnimationFriction,
+        tension: this.props.stackAnimationTension,
+        useNativeDriver: true
+      }).start()
+
+      const newOpacity = Math.pow(this.props.stackOpacity, cardPosition)
+      Animated.spring(this.state[`stackOpacity${i}`], {
+        toValue: newOpacity,
         friction: this.props.stackAnimationFriction,
         tension: this.props.stackAnimationTension,
         useNativeDriver: true
@@ -565,7 +569,8 @@ class Swiper extends Component {
     this.cardStyle,
     {
       zIndex: index * -1,
-      transform: [{ scale: this.state[`stackScale${index}`] }, { translateY: this.state[`stackPosition${index}`] }]
+      transform: [{ scale: this.state[`stackScale${index}`] }, { translateY: this.state[`stackPosition${index}`] }],
+      opacity: this.state[`stackOpacity${index}`]
     },
     this.customCardStyle
   ];
@@ -676,9 +681,9 @@ class Swiper extends Component {
     return cardIndex
   }
 
-  pushCardToStack = (renderedCards, index, key, firstCard) => {
+  pushCardToStack (renderedCards, index, key, firstCard) {
     const { cards } = this.props
-    const stackCardZoomStyle = this.calculateStackCardZoomStyle(index)
+    const stackCardZoomStyle = this.calculateStackCardZoomStyle(renderedCards.length)
     const stackCard = this.props.renderCard(cards[index], index)
     const swipableCardStyle = this.calculateSwipableCardStyle()
     const renderOverlayLabel = this.renderOverlayLabel()
@@ -715,9 +720,15 @@ class Swiper extends Component {
       if (notInfinite && lastCardOrSwipedAllCards) {
         return <Animated.View key={key} />
       } else {
-        this.pushCardToStack(renderedCards, index, key, firstCard)
+        this.pushCardToStack(renderedCards, index, key, renderedStackSize === 0)
         firstCard = false
       }
+    }
+
+    // put swiped cards behind
+    for (let loopIndex = 0; loopIndex < stackSize - renderedStackSize; loopIndex++) {
+      const key = this.getCardKey(cards[loopIndex], loopIndex)
+      this.pushCardToStack(renderedCards, loopIndex, key, false)
     }
 
     return renderedCards
@@ -848,6 +859,7 @@ Swiper.propTypes = {
   stackSeparation: PropTypes.number,
   stackScale: PropTypes.number,
   stackSize: PropTypes.number,
+  stackOpacity: PropTypes.number,
   stackAnimationFriction: PropTypes.number,
   stackAnimationTension: PropTypes.number
 }
@@ -940,6 +952,7 @@ Swiper.defaultProps = {
   stackSeparation: 10,
   stackScale: 3,
   stackSize: 1,
+  stackOpacity: 0.8,
   stackAnimationFriction: 7,
   stackAnimationTension: 40
 }
